@@ -1,5 +1,5 @@
 const steps = [
-  { num: "01", title: "Paste your resume", desc: "Drop in your current resume — any format, any length. We'll handle the rest." },
+  { num: "01", title: "Upload your resume", desc: "Drop a PDF, DOC, or DOCX — or paste plain text. We'll parse it instantly." },
   { num: "02", title: "Add the job posting", desc: "Paste the job description from LinkedIn, Indeed, or any company career page." },
   { num: "03", title: "Get your tailored kit", desc: "An ATS score, a rewritten resume, and a custom cover letter — all in 30 seconds." },
 ];
