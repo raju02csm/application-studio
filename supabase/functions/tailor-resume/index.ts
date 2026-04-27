@@ -1,6 +1,6 @@
 import { corsHeaders } from "https://esm.sh/@supabase/supabase-js@2.95.0/cors";
 import { extractText, getDocumentProxy } from "https://esm.sh/unpdf@0.12.1";
-import { extractRawText } from "https://esm.sh/mammoth@1.8.0/mammoth.browser.js";
+import mammoth from "https://esm.sh/mammoth@1.8.0/mammoth.browser.js";
 
 async function decodeFile(base64: string, mimeType: string, filename: string): Promise<string> {
   const binary = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
@@ -18,7 +18,7 @@ async function decodeFile(base64: string, mimeType: string, filename: string): P
     mimeType === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
     lower.endsWith(".docx")
   ) {
-    const result = await extractRawText({ arrayBuffer: binary.buffer });
+    const result = await mammoth.extractRawText({ arrayBuffer: binary.buffer });
     return result.value;
   }
 
