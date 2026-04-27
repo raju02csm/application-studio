@@ -1,12 +1,60 @@
 import { corsHeaders } from "https://esm.sh/@supabase/supabase-js@2.95.0/cors";
+import { extractText, getDocumentProxy } from "https://esm.sh/unpdf@0.12.1";
+import { extractRawText } from "https://esm.sh/mammoth@1.8.0/mammoth.browser.js";
+
+async function decodeFile(base64: string, mimeType: string, filename: string): Promise<string> {
+  const binary = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
+  const lower = (filename || "").toLowerCase();
+
+  // PDF
+  if (mimeType === "application/pdf" || lower.endsWith(".pdf")) {
+    const pdf = await getDocumentProxy(binary);
+    const { text } = await extractText(pdf, { mergePages: true });
+    return Array.isArray(text) ? text.join("\n") : text;
+  }
+
+  // DOCX
+  if (
+    mimeType === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
+    lower.endsWith(".docx")
+  ) {
+    const result = await extractRawText({ arrayBuffer: binary.buffer });
+    return result.value;
+  }
+
+  // Legacy DOC — best-effort plain extraction
+  if (mimeType === "application/msword" || lower.endsWith(".doc")) {
+    // Strip non-printable bytes; not perfect but usable for simple .doc files
+    const text = new TextDecoder("utf-8", { fatal: false }).decode(binary);
+    return text.replace(/[^\x09\x0A\x0D\x20-\x7E]+/g, " ").replace(/\s+/g, " ").trim();
+  }
+
+  // Plain text fallback
+  return new TextDecoder("utf-8", { fatal: false }).decode(binary);
+}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { resume, jobDescription } = await req.json();
-    if (!resume || !jobDescription) {
-      return new Response(JSON.stringify({ error: "resume and jobDescription are required" }), {
+    const { resume, resumeFile, jobDescription } = await req.json();
+
+    let resumeText = (resume ?? "").toString();
+
+    if (resumeFile && resumeFile.data) {
+      try {
+        resumeText = await decodeFile(resumeFile.data, resumeFile.type ?? "", resumeFile.name ?? "");
+      } catch (err) {
+        console.error("File parsing error:", err);
+        return new Response(
+          JSON.stringify({ error: "Could not read that file. Try a different PDF or paste the text directly." }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+    }
+
+    if (!resumeText.trim() || !jobDescription) {
+      return new Response(JSON.stringify({ error: "Resume content and job description are required" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -26,7 +74,7 @@ Your output MUST be returned by calling the provided function with these fields:
 - tailoredResume: rewritten resume optimized for this JD (preserve all factual info, only enhance phrasing/keywords)
 - coverLetter: a personalized 3-paragraph cover letter for this role`;
 
-    const userPrompt = `JOB DESCRIPTION:\n${jobDescription}\n\n---\n\nCANDIDATE RESUME:\n${resume}`;
+    const userPrompt = `JOB DESCRIPTION:\n${jobDescription}\n\n---\n\nCANDIDATE RESUME:\n${resumeText}`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -93,6 +141,8 @@ Your output MUST be returned by calling the provided function with these fields:
       });
     }
     const result = JSON.parse(toolCall.function.arguments);
+    // Echo back the parsed resume text so the UI can show it
+    result.parsedResumePreview = resumeText.slice(0, 400);
 
     return new Response(JSON.stringify(result), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
