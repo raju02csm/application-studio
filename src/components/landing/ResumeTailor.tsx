@@ -5,6 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Sparkles, Loader2, CheckCircle2, AlertCircle, Copy, Check, Upload, FileText, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { ResumeTemplatePicker } from "./ResumeTemplatePicker";
 
 interface Result {
   matchScore: number;
@@ -277,11 +278,15 @@ const Results = ({ result }: { result: Result }) => {
         </ul>
       </div>
 
-      <Tabs defaultValue="resume" className="rounded-2xl border border-border bg-card shadow-card overflow-hidden">
+      <Tabs defaultValue="templates" className="rounded-2xl border border-border bg-card shadow-card overflow-hidden">
         <TabsList className="w-full justify-start rounded-none bg-muted/40 border-b border-border h-12 p-0">
+          <TabsTrigger value="templates" className="rounded-none data-[state=active]:bg-card h-full px-6">Templates & Download</TabsTrigger>
           <TabsTrigger value="resume" className="rounded-none data-[state=active]:bg-card h-full px-6">Tailored Resume</TabsTrigger>
           <TabsTrigger value="cover" className="rounded-none data-[state=active]:bg-card h-full px-6">Cover Letter</TabsTrigger>
         </TabsList>
+        <TabsContent value="templates" className="m-0 p-0">
+          <ResumeTemplatePicker resumeText={result.tailoredResume} />
+        </TabsContent>
         <TabsContent value="resume" className="m-0">
           <CopyableText text={result.tailoredResume} />
         </TabsContent>
