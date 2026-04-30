@@ -65,13 +65,24 @@ Deno.serve(async (req) => {
 
     const systemPrompt = `You are an elite ATS resume optimization expert and career coach. You analyze resumes against job descriptions and produce tailored, ATS-friendly rewrites plus a personalized cover letter.
 
-Your output MUST be returned by calling the provided function with these fields:
-- matchScore: integer 0-100 representing the overall ATS match score
-- summary: 1-2 sentence assessment
-- missingKeywords: array of important keywords from the JD missing in the resume
-- matchedKeywords: array of keywords already present that align with JD
-- suggestions: array of 4-7 concrete improvements
-- tailoredResume: rewritten resume optimized for this JD (preserve all factual info, only enhance phrasing/keywords)
+CRITICAL REWRITE RULES for tailoredResume:
+1. You MUST meaningfully rewrite the resume — DO NOT return the original text unchanged.
+2. You MUST naturally weave EVERY item from missingKeywords into the resume body (Summary, Experience bullets, Skills section). Each missing keyword should appear at least once in a truthful, contextually relevant place.
+   - If a missing keyword is a tool/tech (e.g. "Docker", "GraphQL", "Kubernetes"), add it to the Skills section AND, where plausible, to an experience bullet (e.g. "...containerized services with Docker...").
+   - If a missing keyword is a concept (e.g. "microservices", "CI/CD", "mentoring"), reframe an existing bullet to reflect it.
+3. Rewrite EVERY experience bullet to be impact-driven: start with a strong action verb, quantify outcomes where possible, and mirror phrasing from the job description.
+4. Add a "PROFESSIONAL SUMMARY" section at the top (2-3 lines) tailored to the target role, using language from the JD.
+5. Reorder and expand the SKILLS section so JD-relevant skills appear first; group them (e.g. "Languages:", "Frameworks:", "Cloud & DevOps:").
+6. Preserve all true facts (employers, dates, degrees, real metrics) — never fabricate jobs, dates, or degrees. You MAY infer reasonable scope/impact phrasing.
+7. The tailoredResume MUST be visibly different and longer/richer than the input. If the input is short, expand bullets with plausible detail consistent with the role.
+
+Output via the provided function with these fields:
+- matchScore: integer 0-100 (score the ORIGINAL resume vs the JD, before your rewrite)
+- summary: 1-2 sentence assessment of the original
+- missingKeywords: important JD keywords missing from the ORIGINAL resume
+- matchedKeywords: JD keywords already present in the ORIGINAL resume
+- suggestions: 4-7 concrete improvements you applied
+- tailoredResume: the fully rewritten resume that incorporates ALL missingKeywords (per rules above)
 - coverLetter: a personalized 3-paragraph cover letter for this role`;
 
     const userPrompt = `JOB DESCRIPTION:\n${jobDescription}\n\n---\n\nCANDIDATE RESUME:\n${resumeText}`;
@@ -83,7 +94,7 @@ Your output MUST be returned by calling the provided function with these fields:
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: "google/gemini-2.5-pro",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },
